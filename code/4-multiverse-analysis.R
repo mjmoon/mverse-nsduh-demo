@@ -131,10 +131,10 @@ age_cond_5 <- branch_condition(
     age2, opioid_use_treatment ~ race, reject = TRUE)
 ## define multiverse
 mv_nsduh <- mverse(nsduh_data) |>
-    add_filter_branch(filter_missing_mdeyr) |>
-    add_mutate_branch(race, age) |>
-    add_family_branch(family_logistic) |>
     add_formula_branch(formulae_logistic) |>
+    add_mutate_branch(race, age) |>
+    add_filter_branch(filter_missing_mdeyr) |>
+    add_family_branch(family_logistic) |>
     add_branch_condition(
         filter_cond, 
         age_cond_1, age_cond_2, age_cond_3, age_cond_4, age_cond_5
@@ -144,18 +144,12 @@ execute_multiverse(mv_nsduh)
 
 multiverse_tree(
     mv_nsduh, 
+    branches = c("age", "formulae_logistic", "covariate_year", "filter_missing_mdeyr"),
     label = "code",
-    branches = c("formulae_logistic", "age"),
     label_size = 2
-    ) +
-    ggraph::scale_edge_colour_brewer(
-        palette = "Dark2",
-        breaks = c("formulae_logistic", "age"),
-        labels = c( "Model Specification", "Age")
-    ) +
-    ggtitle("Multiverse tree diagram") +
-    theme(plot.title = element_text(hjust = 0.5))
-
+    ) 
+ggsave("man/multivere_tree_nsduh_ex.png", device = "png",
+       width = 10, height = 5, units = "in", dpi = 400)
 
 mutiverse_table <- summary(mv_nsduh)
 # fit multiverse ---
@@ -164,7 +158,8 @@ glm_mverse(mv_nsduh)
 multiverse_result <- spec_summary(mv_nsduh, var = "raceBlack")
 plan(sequential)
 
-write.csv(multiverse_result, "data/multiverse_result.csv", row.names = FALSE)
+saveRDS(multiverse_result, "data/multiverse_result.rds")
+multiverse_result <- readRDS("data/multiverse_result.rds")
 
 multiverse_result_formatted <- multiverse_result |>
     select(-starts_with("family_logistic")) |>
@@ -177,12 +172,12 @@ multiverse_result_formatted <- multiverse_result |>
                 age_branch == "age_1" &
                 race_branch == "race_1" &
                 covariate_year_branch == "include_year" &
-                formulae_logistic_branch == "formulae_logistic_2" 
+                formulae_logistic_branch == "formulae_logistic_3" 
         ),
         formulae_logistic_branch = case_match(
             formulae_logistic_branch,
             "formulae_logistic_1" ~ "No covariate",
-            "formulae_logistic_2" ~ "All but major depression episode",
+            "formulae_logistic_2" ~ "All but past-year major depression episode",
             "formulae_logistic_3" ~ "All"
         ),
         race_branch = case_match(
@@ -205,9 +200,9 @@ multiverse_result_formatted <- multiverse_result |>
     ) |>
     rename(
         `Race grouping_branch` = "race_branch",
-        `Covariates (others)_branch` = "formulae_logistic_branch",
+        `Covariate: year_branch` = "covariate_year_branch",
+        `Covariates: others_branch` = "formulae_logistic_branch",
         `Missing major depression episode data_branch` = "filter_missing_mdeyr_branch",
-        `Covariate 'year'_branch` = "covariate_year_branch",
         `Age (variable name in NSDUH PUF)_branch` = "age_branch"
     )
 
@@ -224,6 +219,9 @@ spec_curve_nsduh <- multiverse_result_formatted |>
         breaks = TRUE,
         labels = "Original analysis",
         name = NULL
+    ) +
+    scale_y_continuous(
+        limits = c(0.2, 1)
     ) +
     labs(
         y = NULL,
