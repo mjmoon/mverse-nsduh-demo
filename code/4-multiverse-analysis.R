@@ -146,10 +146,11 @@ multiverse_tree(
     mv_nsduh, 
     branches = c("age", "formulae_logistic", "covariate_year", "filter_missing_mdeyr"),
     label = "code",
-    label_size = 2
-    ) 
+    label_size = 2, label_angle = 30,
+    label_hjust = 0.5, label_vjust = -.3
+    )
 ggsave("man/multivere_tree_nsduh_ex.png", device = "png",
-       width = 10, height = 5, units = "in", dpi = 400)
+       width = 7, height = 5, units = "in", dpi = 400)
 
 mutiverse_table <- summary(mv_nsduh)
 # fit multiverse ---
